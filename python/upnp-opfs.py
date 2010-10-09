@@ -75,7 +75,15 @@ class MSearchClient(object):
     req = urllib2.Request(location)
     res = urllib2.urlopen(req, timeout=self.timeout)
     dom = xml.dom.minidom.parseString(res.read())
-    return getText(dom.getElementsByTagName('URLBase')[0].childNodes)
+    try:
+      return getText(dom.getElementsByTagName('URLBase')[0].childNodes)
+    except IndexError, e:
+      url = re.search('(http://.+)/', location).group(1)
+      if url:
+        return url
+      else:
+        message = ' location not found : %s' % location
+        raise UPnPError('IndexError', message, e)
 
 class SOAPClient(object):
   action_template = '<?xml version="1.0"?>' +\
