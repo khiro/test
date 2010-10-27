@@ -1,0 +1,23 @@
+{
+  "name": "Dictionary Extension",
+  "version": "1.0",
+  "description": "Translation Japanese word to English word",
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["http://*/*"],
+      "js": ["content.js"],
+      "all_frames": true
+    }
+  ],
+  "browser_action": {
+    "default_icon": "icon.png",
+	"popup": "popup.html"
+  },
+  "permissions": [
+    "tabs",
+    "notifications",
+    "http://eow.alc.co.jp/"
+  ],
+  "background_page": "background.html"
+}
