@@ -1,0 +1,21 @@
+{
+  "name": "BBSearchChrome",
+  "version": "1.0",
+  "description": "BB search for Chrome extension",
+  "options_page": "options.html",
+  "icons": { 
+     "16": "icon_016.png",
+     "48": "icon_048.png",
+     "128": "icon_128.png" 
+  },
+  "browser_action": {
+    "default_icon": "icon_016.png",
+	"popup": "popup.html"
+  },
+  "permissions": [
+    "tabs",
+    "notifications",
+    "http://bb.isasaka.net/*"
+  ],
+  "background_page": "background.html"
+}

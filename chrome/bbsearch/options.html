@@ -1,0 +1,60 @@
+<html>
+<head><title>BB Search Extension Options</title></head>
+<script type="text/javascript">
+
+function save_options() {
+  var q = document.getElementById("q");
+  var query = q.value;
+  localStorage["query"] = query;
+
+  var status = document.getElementById("status");
+  status.innerHTML = "Options Saved.";
+  setTimeout(function() {
+    status.innerHTML = "";
+  }, 750);
+}
+
+function restore_options() {
+  var query = localStorage["query"];
+  if (!query) {
+    return;
+  }
+  var q = document.getElementById("q");
+  q.value = query;
+}
+
+</script>
+
+<body onload="restore_options()">
+
+Search Query:<br>
+<input id="q" name="q" maxlength=2048 size=55 value="channel:#shibalab order:desc limit:100">
+<br>
+<button onclick="save_options()">Save</button>
+<div id="status"></div>
+<br>
+<pre>
+<div id="syntax">
+Search Query Syntax<br>
+&lt;query&gt; := &lt;channel&gt; | &lt;words&gt; | &lt;order&gt; | &lt;cache&gt; | &lt;limit&gt; | &lt;date&gt; | &lt;id&gt; |&lt;ts&gt;<br>
+&lt;channel&gt; := 'channel' : '#' &lt;words&gt;<br>
+&lt;words&gt; := &lt;any chars&gt;<br>
+&lt;order&gt; := 'order' : 'asc' | 'desc'<br>
+&lt;cache&gt; := 'cache' : 'on' | 'off'<br>
+&lt;limit&gt; := 'limit' : '4 digits'<br>
+&lt;date&gt; := 'date' : '8 digits'<br>
+&lt;id&gt; := 'id' : '20 digits'<br>
+&lt;ts&gt; := 'ts' : '8 digits'<br>
+</pre>
+</div>
+
+<div id="sample">
+Search Query Sample<br>
+<pre>
+channel:#shibalab order:desc limit:100<br>
+channel:#shibalab order:desc limit:10 http<br>
+limit:10 order:desc date:20101028 Ç†Å[<br>
+</pre>
+</div>
+</body>
+</html>

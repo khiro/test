@@ -1,0 +1,16 @@
+<html>
+ <head>
+ <link rel="stylesheet" type="text/css" href="popup.css">
+ <script type="text/javascript" src="popup.js"></script>
+</head>
+
+<body onload="use_options()">
+<form onsubmit="javascript:popup();return false">
+<input id="q" name="q" maxlength=2048 size=55 value="channel:#shibalab order:desc limit:100">
+
+<input value="search" onclick="popup()" type="button"/>
+</form>
+<div id="result"></div>
+
+</body>
+</html>
