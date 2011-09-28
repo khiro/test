@@ -10,7 +10,9 @@ import socket
 import struct
 import cookielib
 import argparse
+import time
 from HTMLParser import HTMLParser
+
 
 class NicoLive:
 
@@ -22,11 +24,16 @@ class NicoLive:
   THREAD_TEMPLATE = '<thread thread="%s" version="20061206" res_from="-1"/>'
   MY_URL = 'http://live.nicovideo.jp/my'
 
+  GETPOSTKEY_URL = 'http://watch.live.nicovideo.jp/api/getpostkey?thread=%s&block_no=%s'
+  CHAT_THREAD_TEMPLATE = '<chat thread="%s" ticket="%s" vpos="%s" postkey="%s" mail="184" user_id="%s" premium="%s">%s</chat>'
+
   def __init__(self):
     self.login_status = False
     self.thread = None
     self.addr = None
     self.port = None
+    self.user_id = None
+    self.premium = None
 
   def login(self, params):
     cookie = cookielib.CookieJar()
@@ -36,7 +43,7 @@ class NicoLive:
     if cookie._cookies['.nicovideo.jp']:
       self.login_status = True
 
-  def watch(self, lv, cb):
+  def _get_play_status_dom(self, lv):
     if self.login_status is False:
       print 'you haven\'t login'
       exit(0)
@@ -46,6 +53,10 @@ class NicoLive:
     if status['status'] == 'fail':
       print 'program was finished or login failed'
       exit(0)
+    return dom
+
+  def watch(self, lv, cb):
+    dom = self._get_play_status_dom(lv)
 
     for item in dom.findall('.//'):
       if item.tag == 'thread':
@@ -66,7 +77,8 @@ class NicoLive:
       sock.send(struct.pack('b',0))
       try:
         data = sock.recv(1024)
-        cb(data)
+        if cb(data) is False:
+          return data
       except(KeyboardInterrupt, IOError), e:
         print e
         exit(0)
@@ -127,6 +139,76 @@ class NicoLive:
       for lv in favorite_lv_set:
         print '%s : %s' % (lv[0], lv[1])
 
+  def _get_latest_msg_dom(self):
+    data = self._get_msg(lambda x: False)
+    thread_token_last_pos = data.index('/>')
+    return etree.fromstring(data[:thread_token_last_pos+2])
+
+  def _get_postkey(self, block_no):
+    postkey_url = self.GETPOSTKEY_URL % (self.thread, block_no)
+    postkey = self._urlopen(postkey_url, None, lambda x: x)
+    return postkey.split('=')[1]
+
+  def _post_comment(self, ticket, vpos, postkey, comment):
+    message = self.CHAT_THREAD_TEMPLATE % (self.thread, ticket, vpos, postkey, self.user_id, self.premium, comment)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((self.addr, int(self.port)))
+    sock.send(message)
+    sock.send(struct.pack('b',0))
+    try:
+      data = sock.recv(1024)
+      chat_last_pos = data.index('/>')
+      return etree.fromstring(data[:chat_last_pos+2])
+    except Exception, e:
+      print 'unhandled exception', e
+      exit(0)
+
+  def post(self, lv, comment):
+    print lv, comment
+    dom = self._get_play_status_dom(lv)
+
+    for item in dom.findall('.//'):
+      if item.tag == 'thread':
+        self.thread = item.text
+      elif item.tag == 'addr':
+        self.addr = item.text
+      elif item.tag == 'port':
+        self.port = item.text
+      elif item.tag == 'user_id':
+        self.user_id = item.text
+      elif item.tag == 'start_time':
+        start_time = item.text
+      elif item.tag == 'is_premium':
+        self.premium = item.text
+
+    # get latest comment
+    dom = self._get_latest_msg_dom()
+    if dom.tag != 'thread':
+      print 'program was finished or login failed'
+      exit(0)
+
+    ticket = dom.attrib['ticket']
+    last_res = dom.attrib['last_res']
+
+    # get block_no
+    block_no = int(last_res) / 100
+
+    # calc vpos
+    vpos = (int(time.time()) - int(start_time)) * 100
+    
+    # get postkey
+    postkey = self._get_postkey(block_no)
+
+    # send message
+    dom = self._post_comment(ticket, vpos, postkey, comment)
+    print dom.attrib
+    if dom.attrib['status'] == '0':
+      print 'message post success'
+    else:
+      print 'message post fail'
+    
+
+
 class MyHTMLParser(HTMLParser):
 
   WATCH_RE = re.compile('http://live.nicovideo.jp/watch/(lv[0-9]+)', re.I)
@@ -147,6 +229,7 @@ def main():
     print msg
   parser = argparse.ArgumentParser(description='NicoLive Comment View')
   parser.add_argument('-lv', type=str, help='target nicolive lv')
+  parser.add_argument('-post', type=str, help='post message')
   parser.add_argument('-my', action='store_true', help='show favorite community\'s live')
   args = parser.parse_args()
 
@@ -157,6 +240,8 @@ def main():
   if args.my:
     #nicolive.antena(params)
     nicolive.my()
+  elif args.lv and args.post:
+    nicolive.post(args.lv, args.post)
   elif args.lv:
     nicolive.watch(args.lv, _print_msg)
   else:
